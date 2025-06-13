@@ -1,0 +1,346 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Página de Doação - Reforma da Igreja</title>
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&display=swap" rel="stylesheet">
+  <!-- Firebase SDK -->
+  <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js"></script>
+  <!-- Stripe.js -->
+  <script src="https://js.stripe.com/v3/"></script>
+  <style>
+    body {
+      margin: 0;
+      font-family: 'Poppins', sans-serif;
+      background-color: #f1f5f9;
+    }
+    .container {
+      max-width: 1000px;
+      margin: auto;
+      padding: 0 20px;
+    }
+    header {
+      background: linear-gradient(135deg, #003f91, #0050c8);
+      color: white;
+      padding: 60px 20px;
+      text-align: center;
+      box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+    }
+    header h1 {
+      font-size: 36px;
+      font-weight: 700;
+      margin: 0;
+    }
+    header p {
+      font-size: 18px;
+      margin-top: 10px;
+      opacity: 0.9;
+    }
+    main {
+      padding: 50px 20px;
+      background-color: #fff;
+    }
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+      gap: 30px;
+    }
+    .card {
+      background: #fff;
+      padding: 30px;
+      border-radius: 16px;
+      box-shadow: 0 8px 20px rgba(0, 0, 0, 0.1);
+      transition: transform 0.3s, box-shadow 0.3s;
+    }
+    .card:hover {
+      transform: translateY(-10px);
+      box-shadow: 0 12px 30px rgba(0, 0, 0, 0.15);
+    }
+    .card h2 {
+      font-size: 28px;
+      font-weight: 700;
+      color: #003f91;
+      margin-bottom: 20px;
+      text-align: center;
+    }
+    .form-group {
+      margin-bottom: 20px;
+    }
+    .form-group label {
+      display: block;
+      font-size: 16px;
+      font-weight: 600;
+      color: #333;
+      margin-bottom: 10px;
+    }
+    .form-group input, .form-group select {
+      width: 100%;
+      padding: 12px;
+      border: 2px solid #e0e0e0;
+      border-radius: 10px;
+      font-size: 16px;
+      background-color: #f9fafb;
+      transition: border-color 0.3s;
+    }
+    .form-group input:focus, .form-group select:focus {
+      border-color: #f4a300;
+      outline: none;
+    }
+    button {
+      width: 100%;
+      padding: 16px;
+      background: #f4a300;
+      color: white;
+      border: none;
+      border-radius: 10px;
+      font-size: 18px;
+      font-weight: 700;
+      cursor: pointer;
+      transition: transform 0.2s, background 0.2s;
+      animation: pulse 2s infinite;
+    }
+    button:hover {
+      background: #e69500;
+      transform: scale(1.05);
+    }
+    @keyframes pulse {
+      0% { transform: scale(1); }
+      50% { transform: scale(1.03); }
+      100% { transform: scale(1); }
+    }
+    .progress-container {
+      margin-top: 20px;
+    }
+    .progress-bar {
+      height: 20px;
+      background: linear-gradient(90deg, #0050c8, #89a8d6);
+      border-radius: 10px;
+      transition: width 1.5s ease-in-out;
+    }
+    .progress-bg {
+      background-color: #e0e0e0;
+      border-radius: 10px;
+      height: 20px;
+      overflow: hidden;
+    }
+    .progress-text {
+      font-size: 14px;
+      color: #333;
+      margin: 8px 0;
+      text-align: center;
+    }
+    .cta-text {
+      font-size: 16px;
+      color: #003f91;
+      font-weight: 600;
+      text-align: center;
+      margin-top: 20px;
+    }
+    footer {
+      background: #003f91;
+      color: white;
+      padding: 30px 20px;
+      text-align: center;
+      margin-top: 50px;
+    }
+    footer p {
+      margin: 5px 0;
+    }
+    footer a {
+      color: #f4a300;
+      text-decoration: underline;
+      font-weight: 600;
+    }
+    @media (max-width: 600px) {
+      .grid {
+        grid-template-columns: 1fr;
+      }
+      header h1 {
+        font-size: 28px;
+      }
+      header p {
+        font-size: 16px;
+      }
+      .card {
+        padding: 20px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="container">
+      <h1>Junte-se à Reforma da Igreja!</h1>
+      <p>Sua doação para a Fase 2 transformará nossa comunidade!</p>
+    </div>
+  </header>
+
+  <main>
+    <div class="container">
+      <div class="grid">
+        <!-- Formulário de Doação -->
+        <div class="card">
+          <h2>Doe Online Agora</h2>
+          <form id="donationForm">
+            <div class="form-group">
+              <label for="amount">Valor da Doação (R$)</label>
+              <input type="number" id="amount" name="amount" min="1" step="0.01" required>
+            </div>
+            <div class="form-group">
+              <label for="donationType">Tipo de Doação</label>
+              <select id="donationType" name="donationType">
+                <option value="unique">Doação Única</option>
+                <option value="monthly">Doação Mensal</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label for="name">Nome (Opcional)</label>
+              <input type="text" id="name" name="name">
+            </div>
+            <div class="form-group">
+              <label for="email">E-mail (Opcional)</label>
+              <input type="email" id="email" name="email">
+            </div>
+            <button type="submit">Doar Agora!</button>
+          </form>
+          <p class="cta-text">Sua doação faz a diferença!</p>
+        </div>
+
+        <!-- Seção Reforma da Igreja -->
+        <div class="card">
+          <h2>Progresso da Reforma</h2>
+          <p><strong>Fase 1 Concluída!</strong></p>
+          <p>
+            Arrecadamos R$ 250.000,00, revitalizando nossa igreja! Veja:
+          </p>
+          <div class="progress-container">
+            <p class="progress-text">Meta Fase 1: R$ 250.000,00</p>
+            <div class="progress-bg">
+              <div id="progressBarPhase1" class="progress-bar"></div>
+            </div>
+            <p class="progress-text">Arrecadado: R$ <span id="raised-amount-phase1">-</span></p>
+          </div>
+          <p style="margin-top: 20px;"><strong>Fase 2: Em Andamento</strong></p>
+          <p>
+            Ajude a Fase 2 com melhorias como:
+          </p>
+          <ul style="list-style-type: disc; margin-left: 20px; margin-bottom: 20px;">
+            <li>Modernização do sistema elétrico</li>
+            <li>Novos espaços comunitários</li>
+            <li>Manutenção do telhado</li>
+          </ul>
+          <div class="progress-container">
+            <p class="progress-text">Meta Fase 2: R$ 250.000,00</p>
+            <div class="progress-bg">
+              <div id="progressBarPhase2" class="progress-bar"></div>
+            </div>
+            <p class="progress-text">Arrecadado: R$ <span id="raised-amount-phase2">-</span></p>
+          </div>
+          <p class="cta-text">Doe agora e faça parte da Fase 2!</p>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <footer>
+    <div class="container">
+      <p>© 2025 Igreja Presbiteriana de Itapetininga. Todos os direitos reservados.</p>
+      <p>
+        Dúvidas? Entre em contato: <a href="mailto:contato@itapecentral.com.br">contato@itapecentral.com.br</a>
+      </p>
+    </div>
+  </footer>
+
+  <script>
+    // Configuração do Firebase
+    const firebaseConfig = {
+      apiKey: "AIzaSyD4ASoWkOqGTzk8n21C18041wGnFz4uSNM",
+      authDomain: "contribua-central.firebaseapp.com",
+      projectId: "contribua-central",
+      storageBucket: "contribua-central.firebasestorage.app",
+      messagingSenderId: "44398844169",
+      appId: "1:44398844169:web:99621b25ee4049eae45bd8",
+      measurementId: "G-HSH7KQYQV0"
+    };
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.firestore();
+
+    // Inicializar Stripe
+    const stripe = Stripe('pk_test_51QuIewH28i0JUr05GIrr5kJ0oUwdqKPTrEYeo5bvbqjRGoupQbhxTx1TmcQ3Cep5kQr03UtQ96b7q987M1vlm1PF00Cb7cs9QY');
+
+    // Função para atualizar os termômetros
+    function updateProgressBars() {
+      // Fase 1
+      const goalPhase1 = 250000;
+      db.collection("donations").doc("reforma-igreja-fase1").get()
+        .then((doc) => {
+          const raised = doc.exists ? doc.data().total : 250000;
+          const percentage = Math.min((raised / goalPhase1) * 100, 100);
+          document.getElementById("progressBarPhase1").style.width = `${percentage}%`;
+          document.getElementById("raised-amount-phase1").textContent = raised.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+        })
+        .catch((error) => {
+          console.error("Erro ao buscar Fase 1:", error);
+          document.getElementById("raised-amount-phase1").textContent = "250.000,00";
+          document.getElementById("progressBarPhase1").style.width = "100%";
+        });
+
+      // Fase 2
+      const goalPhase2 = 250000;
+      db.collection("donations").doc("reforma-igreja-fase2").get()
+        .then((doc) => {
+          const raised = doc.exists ? doc.data().total : 0;
+          const percentage = Math.min((raised / goalPhase2) * 100, 100);
+          document.getElementById("progressBarPhase2").style.width = `${percentage}%`;
+          document.getElementById("raised-amount-phase2").textContent = raised.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+        })
+        .catch((error) => {
+          console.error("Erro ao buscar Fase 2:", error);
+          document.getElementById("raised-amount-phase2").textContent = "0,00";
+          document.getElementById("progressBarPhase2").style.width = "0%";
+        });
+    }
+
+    // Atualiza ao carregar a página
+    setTimeout(updateProgressBars, 500); // Atraso para animação
+
+    // Processar formulário
+    document.getElementById("donationForm").addEventListener("submit", async function(e) {
+      e.preventDefault();
+      const amount = parseFloat(document.getElementById("amount").value);
+      const donationType = document.getElementById("donationType").value;
+      const name = document.getElementById("name").value;
+      const email = document.getElementById("email").value;
+
+      try {
+        // Criar sessão de checkout
+        const response = await fetch('/.netlify/functions/stripe-checkout', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ amount: amount * 100, donationType })
+        });
+        const { sessionId } = await response.json();
+
+        // Redirecionar para o checkout
+        const { error } = await stripe.redirectToCheckout({ sessionId });
+        if (error) {
+          console.error('Erro no Stripe:', error);
+          alert('Erro ao redirecionar para o pagamento. Tente novamente.');
+        }
+
+        // Atualizar Firestore (manual)
+        await db.collection("donations").doc("reforma-igreja-fase2").set({
+          total: firebase.firestore.FieldValue.increment(amount)
+        }, { merge: true });
+        updateProgressBars();
+        alert(`Doação de R$${amount.toFixed(2)} (${donationType}) registrada!`);
+      } catch (error) {
+        console.error('Erro:', error);
+        alert('Erro ao processar a doação. Tente novamente.');
+      }
+    });
+  </script>
+</body>
+</html>
