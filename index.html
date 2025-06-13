@@ -5,9 +5,6 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Página de Doação - Reforma da Igreja</title>
   <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&display=swap" rel="stylesheet">
-  <!-- Firebase SDK -->
-  <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js"></script>
   <!-- Stripe.js -->
   <script src="https://js.stripe.com/v3/"></script>
   <style>
@@ -153,6 +150,13 @@
       text-decoration: underline;
       font-weight: 600;
     }
+    .error-message {
+      color: red;
+      font-size: 14px;
+      text-align: center;
+      margin-top: 10px;
+      display: none;
+    }
     @media (max-width: 600px) {
       .grid {
         grid-template-columns: 1fr;
@@ -204,6 +208,7 @@
               <input type="email" id="email" name="email">
             </div>
             <button type="submit">Doar Agora!</button>
+            <p id="errorMessage" class="error-message"></p>
           </form>
           <p class="cta-text">Sua doação faz a diferença!</p>
         </div>
@@ -253,7 +258,11 @@
     </div>
   </footer>
 
-  <script>
+  <script type="module">
+    // Importar Firebase
+    import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.14.1/firebase-app.js';
+    import { getFirestore, doc, getDoc, setDoc, increment } from 'https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js';
+
     // Configuração do Firebase
     const firebaseConfig = {
       apiKey: "AIzaSyD4ASoWkOqGTzk8n21C18041wGnFz4uSNM",
@@ -264,55 +273,88 @@
       appId: "1:44398844169:web:99621b25ee4049eae45bd8",
       measurementId: "G-HSH7KQYQV0"
     };
-    firebase.initializeApp(firebaseConfig);
-    const db = firebase.firestore();
+
+    // Inicializar Firebase
+    let db;
+    try {
+      const app = initializeApp(firebaseConfig);
+      db = getFirestore(app);
+    } catch (error) {
+      console.error('Erro ao inicializar Firebase:', error);
+      showError('Erro ao conectar com o banco de dados. Tente novamente mais tarde.');
+    }
 
     // Inicializar Stripe
     const stripe = Stripe('pk_test_51QuIewH28i0JUr05GIrr5kJ0oUwdqKPTrEYeo5bvbqjRGoupQbhxTx1TmcQ3Cep5kQr03UtQ96b7q987M1vlm1PF00Cb7cs9QY');
 
+    // Função para exibir erros
+    function showError(message) {
+      const errorElement = document.getElementById('errorMessage');
+      errorElement.textContent = message;
+      errorElement.style.display = 'block';
+      setTimeout(() => { errorElement.style.display = 'none'; }, 5000);
+    }
+
     // Função para atualizar os termômetros
-    function updateProgressBars() {
+    async function updateProgressBars() {
+      if (!db) {
+        console.error('Firestore não inicializado');
+        return;
+      }
       // Fase 1
       const goalPhase1 = 250000;
-      db.collection("donations").doc("reforma-igreja-fase1").get()
-        .then((doc) => {
-          const raised = doc.exists ? doc.data().total : 250000;
-          const percentage = Math.min((raised / goalPhase1) * 100, 100);
-          document.getElementById("progressBarPhase1").style.width = `${percentage}%`;
-          document.getElementById("raised-amount-phase1").textContent = raised.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-        })
-        .catch((error) => {
-          console.error("Erro ao buscar Fase 1:", error);
-          document.getElementById("raised-amount-phase1").textContent = "250.000,00";
-          document.getElementById("progressBarPhase1").style.width = "100%";
-        });
+      try {
+        const phase1Doc = await getDoc(doc(db, 'donations', 'reforma-igreja-fase1'));
+        const raised = phase1Doc.exists() ? phase1Doc.data().total : 250000;
+        const percentage = Math.min((raised / goalPhase1) * 100, 100);
+        document.getElementById('progressBarPhase1').style.width = `${percentage}%`;
+        document.getElementById('raised-amount-phase1').textContent = raised.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+      } catch (error) {
+        console.error('Erro ao buscar Fase 1:', error);
+        document.getElementById('raised-amount-phase1').textContent = '250.000,00';
+        document.getElementById('progressBarPhase1').style.width = '100%';
+      }
 
       // Fase 2
       const goalPhase2 = 250000;
-      db.collection("donations").doc("reforma-igreja-fase2").get()
-        .then((doc) => {
-          const raised = doc.exists ? doc.data().total : 0;
-          const percentage = Math.min((raised / goalPhase2) * 100, 100);
-          document.getElementById("progressBarPhase2").style.width = `${percentage}%`;
-          document.getElementById("raised-amount-phase2").textContent = raised.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-        })
-        .catch((error) => {
-          console.error("Erro ao buscar Fase 2:", error);
-          document.getElementById("raised-amount-phase2").textContent = "0,00";
-          document.getElementById("progressBarPhase2").style.width = "0%";
-        });
+      try {
+        const phase2Doc = await getDoc(doc(db, 'donations', 'reforma-igreja-fase2'));
+        const raised = phase2Doc.exists() ? phase2Doc.data().total : 0;
+        const percentage = Math.min((raised / goalPhase2) * 100, 100);
+        document.getElementById('progressBarPhase2').style.width = `${percentage}%`;
+        document.getElementById('raised-amount-phase2').textContent = raised.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+      } catch (error) {
+        console.error('Erro ao buscar Fase 2:', error);
+        document.getElementById('raised-amount-phase2').textContent = '0,00';
+        document.getElementById('progressBarPhase2').style.width = '0%';
+      }
     }
 
     // Atualiza ao carregar a página
-    setTimeout(updateProgressBars, 500); // Atraso para animação
+    setTimeout(() => {
+      if (db) {
+        updateProgressBars();
+      } else {
+        console.error('Firestore não disponível ao carregar a página');
+      }
+    }, 500);
 
     // Processar formulário
-    document.getElementById("donationForm").addEventListener("submit", async function(e) {
+    document.getElementById('donationForm').addEventListener('submit', async (e) => {
       e.preventDefault();
-      const amount = parseFloat(document.getElementById("amount").value);
-      const donationType = document.getElementById("donationType").value;
-      const name = document.getElementById("name").value;
-      const email = document.getElementById("email").value;
+      const submitButton = e.target.querySelector('button');
+      submitButton.disabled = true;
+
+      const amount = parseFloat(document.getElementById('amount').value);
+      const donationType = document.getElementById('donationType').value;
+      const name = document.getElementById('name').value;
+      const email = document.getElementById('email').value;
+
+      if (amount < 1) {
+        showError('O valor mínimo da doação é R$ 1,00.');
+        submitButton.disabled = false;
+        return;
+      }
 
       try {
         // Criar sessão de checkout
@@ -321,24 +363,35 @@
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ amount: amount * 100, donationType })
         });
+
+        if (!response.ok) {
+          throw new Error(`Erro HTTP: ${response.status}`);
+        }
+
         const { sessionId } = await response.json();
+        if (!sessionId) {
+          throw new Error('Sessão de pagamento não criada.');
+        }
 
         // Redirecionar para o checkout
         const { error } = await stripe.redirectToCheckout({ sessionId });
         if (error) {
           console.error('Erro no Stripe:', error);
-          alert('Erro ao redirecionar para o pagamento. Tente novamente.');
+          showError('Erro ao redirecionar para o pagamento. Tente novamente.');
         }
 
-        // Atualizar Firestore (manual)
-        await db.collection("donations").doc("reforma-igreja-fase2").set({
-          total: firebase.firestore.FieldValue.increment(amount)
-        }, { merge: true });
-        updateProgressBars();
-        alert(`Doação de R$${amount.toFixed(2)} (${donationType}) registrada!`);
+        // Atualizar Firestore (manual, apenas após sucesso)
+        if (db) {
+          await setDoc(doc(db, 'donations', 'reforma-igreja-fase2'), {
+            total: increment(amount)
+          }, { merge: true });
+          updateProgressBars();
+        }
       } catch (error) {
-        console.error('Erro:', error);
-        alert('Erro ao processar a doação. Tente novamente.');
+        console.error('Erro ao processar doação:', error);
+        showError('Erro ao processar a doação. Verifique sua conexão e tente novamente.');
+      } finally {
+        submitButton.disabled = false;
       }
     });
   </script>
